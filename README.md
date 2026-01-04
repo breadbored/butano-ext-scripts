@@ -52,6 +52,12 @@ git submodule update --init --recursive
 
 This will pull all the submodules so that you may use them.
 
+Install the required packages with
+
+```bash
+pip install -r ext-scripts/requirements.txt
+```
+
 Confirm that you have the submodule by running this:
 
 ```bash
@@ -69,14 +75,50 @@ my-butano-game/
 ├─ fonts/
 ```
 
-Add the following lines to your Makefile below the other variables:
+Add the following lines to your Makefile at the bottom of the other variables:
 
 ```Makefile
-EXTFONTS    := fonts
-include ext-scripts/fonts.mak
+EXTTOOL     :=  $(MAKE) fonts
+EXTSCRIPTS  :=  ext-scripts
+EXTFONTS    :=  fonts
+
+ifndef EXTSCRIPTSABS
+	export EXTSCRIPTSABS	:=	$(realpath $(EXTSCRIPTS))
+endif
+
+include $(EXTSCRIPTSABS)/fonts.mak
 ```
 
-Note: Ensure that `PYTHON` is set in your Butano Makefile
+Add the following line to the bottom of your Makefile
+
+```Makefile
+include $(EXTSCRIPTSABS)/commands.mak
+```
+
+Your Makefile should look something like this:
+
+```Makefile
+TARGET      :=  my-butano-game
+BUILD       :=  build
+# [...]
+EXTTOOL     :=  $(MAKE) fonts
+EXTSCRIPTS  :=  ext-scripts
+EXTFONTS    :=  fonts
+
+ifndef EXTSCRIPTSABS
+	export EXTSCRIPTSABS	:=	$(realpath $(EXTSCRIPTS))
+endif
+
+include $(EXTSCRIPTSABS)/fonts.mak
+
+ifndef LIBBUTANOABS
+	export LIBBUTANOABS	:=	$(realpath $(LIBBUTANO))
+endif
+
+include $(LIBBUTANOABS)/butano.mak
+
+include $(EXTSCRIPTSABS)/commands.mak
+```
 
 You can put Construct 3 compatible fonts ([such as this GREAT collection of pixel art fonts](https://itch.io/s/158296/40-pixel-fonts-for-40-dollars-thats-it-thats-the-sale)) into this directory using the following structure (where `arthur` is an example font name):
 
@@ -88,11 +130,15 @@ my-butano-game/
 │  │  ├─ arthur.txt # the Construct 3 definition file
 ```
 
+Now, when you run `make`, it will build the font as an asset that you can use like any other font with
 
+```cpp
+#include "fonts/arthur_8x8_font.hpp"
+```
 
 ## TODO:
 
-- [ ] Font generator
+- [x] Font generator
 - [ ] PNG graphics support
 - [ ] WAV compressor / resampler
 - [ ] Aseprite extension for GBA indexed BMP export

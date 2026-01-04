@@ -8,9 +8,15 @@ from pathlib import Path
 from typing import List, Tuple, Dict
 from PIL import Image
 
-ARTHUR_UTF8_CHARS = ["Á", "É", "Í", "Ó", "Ú", "Ü", "Ñ", "á", "é", "í", "ó", "ú", "ü", "ñ", "¡", "¿"]
-ARTHUR_ASCII_CHARS = [chr(i) for i in range(32, 127)]
-ARTHUR_CHARACTER_SET = ''.join(ARTHUR_ASCII_CHARS) + ''.join(ARTHUR_UTF8_CHARS)
+ORIGINAL_UTF8_CHARS = ("Á", "É", "Í", "Ó", "Ú", "Ü", "Ñ", "á", "é", "í", "ó", "ú", "ü", "ñ", "¡", "¿")
+ORIGINAL_ASCII_CHARS = (chr(i) for i in range(32, 127))
+ORIGINAL_CHARACTER_SET = ''.join(ORIGINAL_ASCII_CHARS) + ''.join(ORIGINAL_UTF8_CHARS)
+
+CHARS = " !\"#$%&\'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~ÁÉÍÓÚÜÑáéíóúüñ¡¿"
+ARTHUR_CHARACTER_SET = set(x for x in CHARS)
+
+print("ARTHUR_CHARACTER_SET", len(CHARS), " - ", len(ARTHUR_CHARACTER_SET), "\n\n")
+
 
 def find_unused_color(pixels) -> Tuple[int, int, int] | None:
     used_colors = set()
@@ -26,6 +32,7 @@ def find_unused_color(pixels) -> Tuple[int, int, int] | None:
 
     return None
 
+
 def convert_png_to_bmp(png_path: str, bmp_path: str, color_depth: int = 16):
     if color_depth not in [16, 256]:
         raise ValueError("color_depth must be either 16 or 256")
@@ -37,7 +44,7 @@ def convert_png_to_bmp(png_path: str, bmp_path: str, color_depth: int = 16):
     if not unused_color:
         raise ValueError(f"Could not find an unused color in {png_path}")
 
-    transparent_indexes = [i for i, pixel in enumerate(img.getdata()) if pixel[3] == 0] # type: ignore
+    transparent_indexes = [i for i, pixel in enumerate(img.getdata()) if pixel[3] == 0]  # type: ignore
 
     img = img.convert('RGB').quantize(colors=color_depth)
     palette = img.getpalette()
@@ -57,6 +64,7 @@ def convert_png_to_bmp(png_path: str, bmp_path: str, color_depth: int = 16):
     img.info['transparency'] = 0
 
     img.save(bmp_path, format='BMP')
+
 
 def parse_font_txt(txt_path: str) -> Dict:
     with open(txt_path, 'r', encoding='utf-8') as f:
@@ -92,6 +100,7 @@ def parse_font_txt(txt_path: str) -> Dict:
         'char_spacing': char_spacing
     }
 
+
 def create_character_width_map(spacing_data: List) -> Dict[str, int]:
     char_widths = {}
     if spacing_data:
@@ -100,7 +109,9 @@ def create_character_width_map(spacing_data: List) -> Dict[str, int]:
                 char_widths[char] = width
     return char_widths
 
-def extract_characters_from_grid(png_path: str, charset: str, tile_width: int, tile_height: int) -> Tuple[List[Image.Image], str, int, int]:
+
+def extract_characters_from_grid(png_path: str, charset: str, tile_width: int, tile_height: int) -> Tuple[
+    List[Image.Image], str, int, int]:
     img = Image.open(png_path).convert("RGBA")
 
     cols = 26
@@ -116,6 +127,8 @@ def extract_characters_from_grid(png_path: str, charset: str, tile_width: int, t
         for col in range(cols):
             if char_index >= len(charset):
                 break
+            if charset[char_index] == ' ':
+                continue
 
             char = charset[char_index]
 
@@ -123,21 +136,26 @@ def extract_characters_from_grid(png_path: str, charset: str, tile_width: int, t
             y = row * tile_height
             char_img = img.crop((x, y, x + tile_width, y + tile_height))
 
-            if char in ARTHUR_CHARACTER_SET:
-                bbox = char_img.getbbox()
-                if bbox:
-                    char_img = char_img.crop(bbox)
-                    content_width = bbox[2] - bbox[0]
-                    content_height = bbox[3] - bbox[1]
-                    max_content_width = max(max_content_width, content_width)
-                    max_content_height = max(max_content_height, content_height)
+            if char in CHARS:
+                if char_index < len(charset) + 1:
+                    bbox = char_img.getbbox()
+                    if bbox:
+                        char_img = char_img.crop(bbox)
+                        content_width = bbox[2] - bbox[0]
+                        content_height = bbox[3] - bbox[1]
+                        max_content_width = max(max_content_width, content_width)
+                        max_content_height = max(max_content_height, content_height)
 
                 characters.append(char_img)
                 filtered_charset.append(char)
 
             char_index += 1
 
+    characters = sorted(characters, key=lambda _x: CHARS.index(filtered_charset[characters.index(_x)]), reverse=False)
+    filtered_charset = sorted(filtered_charset, key=lambda _x: CHARS.index(_x), reverse=False)
+
     return characters, ''.join(filtered_charset), max_content_width, max_content_height
+
 
 def round_up_to_gba_sprite_size(width: int, height: int) -> int:
     max_dim = max(width, height)
@@ -152,6 +170,7 @@ def round_up_to_gba_sprite_size(width: int, height: int) -> int:
         return 64
     else:
         raise ValueError(f"Font dimensions {width}x{height} too large for GBA (max 64x64)")
+
 
 def create_vertical_strip(characters: List[Image.Image], target_width: int, target_height: int) -> Image.Image:
     num_chars = len(characters)
@@ -168,6 +187,7 @@ def create_vertical_strip(characters: List[Image.Image], target_width: int, targ
 
     return strip
 
+
 def generate_json_file(output_path: str, sprite_width: int, sprite_height: int):
     data = {
         "type": "sprite",
@@ -177,10 +197,10 @@ def generate_json_file(output_path: str, sprite_width: int, sprite_height: int):
     with open(output_path, 'w') as f:
         json.dump(data, f, indent=4)
 
+
 def generate_cpp_header(output_path: str, font_name: str, size_name: str,
                         charset: str, char_widths: Dict[str, int],
                         sprite_item_name: str):
-
     utf8_chars = []
     utf8_widths = []
 
@@ -192,10 +212,15 @@ def generate_cpp_header(output_path: str, font_name: str, size_name: str,
         else:
             ascii_widths.append((ascii_code, char, 8))
 
-    for char in ARTHUR_UTF8_CHARS:
+    # Always include all Arthur UTF-8 characters to maintain consistent indexing
+    # across all fonts, even if they're not in the actual font data
+    for char in ORIGINAL_UTF8_CHARS:
+        utf8_chars.append(char)
         if char in charset and char in char_widths:
-            utf8_chars.append(char)
             utf8_widths.append(char_widths[char])
+        else:
+            # Use default width of 8 for missing UTF-8 characters
+            utf8_widths.append(8)
 
     guard = f"{font_name.upper()}_{size_name.upper()}_FONT_HPP"
 
@@ -214,9 +239,10 @@ def generate_cpp_header(output_path: str, font_name: str, size_name: str,
     ]
 
     if utf8_chars:
+        # Format UTF-8 characters on a single line like Arthur font for consistency
+        utf8_chars_formatted = ", ".join([f'"{char}"' for char in utf8_chars])
         lines.append(f"constexpr bn::utf8_character {font_name}_{size_name}_sprite_font_utf8_characters[] = {{")
-        for char in utf8_chars:
-            lines.append(f'    "{char}",')
+        lines.append(f"    {utf8_chars_formatted}")
         lines.append("};")
         lines.append("")
 
@@ -225,9 +251,11 @@ def generate_cpp_header(output_path: str, font_name: str, size_name: str,
 
         char_display = char
         if char == '\\':
-            char_display = '\\\\'
+            char_display = '[backslash]'
         elif char == "'":
             char_display = "\\'"
+        elif char == '"':
+            char_display = '\\"'
         lines.append(f"    {width}, // {ascii_code} {char_display}")
 
     for i, width in enumerate(utf8_widths):
@@ -236,29 +264,24 @@ def generate_cpp_header(output_path: str, font_name: str, size_name: str,
     lines.append("};")
     lines.append("")
 
-    if utf8_chars:
-        lines.extend([
-            f"constexpr bn::span<const bn::utf8_character> {font_name}_{size_name}_sprite_font_utf8_characters_span(",
-            f"    {font_name}_{size_name}_sprite_font_utf8_characters",
-            ");",
-            "",
-            f"constexpr auto {font_name}_{size_name}_sprite_font_utf8_characters_map =",
-            f"    bn::utf8_characters_map<{font_name}_{size_name}_sprite_font_utf8_characters_span>();",
-            "",
-        ])
+    # Always create the span and map since we always include Arthur UTF-8 characters
+    lines.extend([
+        f"constexpr bn::span<const bn::utf8_character> {font_name}_{size_name}_sprite_font_utf8_characters_span(",
+        f"    {font_name}_{size_name}_sprite_font_utf8_characters",
+        ");",
+        "",
+        f"constexpr auto {font_name}_{size_name}_sprite_font_utf8_characters_map =",
+        f"    bn::utf8_characters_map<{font_name}_{size_name}_sprite_font_utf8_characters_span>();",
+        "",
+    ])
 
     lines.extend([
         f"constexpr bn::sprite_font {font_name}_{size_name}_sprite_font(",
-        f"    bn::sprite_items::{sprite_item_name}, "
+        f"    bn::sprite_items::{sprite_item_name}, {font_name}_{size_name}_sprite_font_utf8_characters_map.reference(),",
+        f"    {font_name}_{size_name}_sprite_font_character_widths"
     ])
 
-    if utf8_chars:
-        lines.append(f"    {font_name}_{size_name}_sprite_font_utf8_characters_map.reference(),")
-    else:
-        lines.append("    bn::utf8_characters_map_ref(),")
-
     lines.extend([
-        f"    {font_name}_{size_name}_sprite_font_character_widths",
         ");",
         "",
         f"#endif //{guard}",
@@ -267,6 +290,7 @@ def generate_cpp_header(output_path: str, font_name: str, size_name: str,
 
     with open(output_path, 'w') as f:
         f.write('\n'.join(lines))
+
 
 def convert_font(font_dir: str | Path, graphics_dir: str | Path, includes_dir: str | Path,
                  font_name: str | None = None, target_sprite_size: int | None = None):
@@ -304,7 +328,12 @@ def convert_font(font_dir: str | Path, graphics_dir: str | Path, includes_dir: s
 
     char_widths = create_character_width_map(spacing_data) if spacing_data else {}
 
-    characters, filtered_charset, max_content_width, max_content_height = extract_characters_from_grid(str(png_path), charset, char_width, char_height)
+    characters, filtered_charset, max_content_width, max_content_height = extract_characters_from_grid(str(png_path),
+                                                                                                       charset,
+                                                                                                       char_width,
+                                                                                                       char_height)
+
+    print(filtered_charset)
     print(f"  Extracted {len(characters)} characters (filtered from {len(charset)} total)")
 
     actual_width = max_content_width if char_width > max_content_width > 0 else char_width

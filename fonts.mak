@@ -9,13 +9,7 @@ $(error "EXTFONTS not found")
 endif
 
 EXTSCRIPTS_DIR := $(dir $(lastword $(MAKEFILE_LIST)))
-FONT_GRAPHICS := $(BUILD)/fonts/graphics
-FONT_INCLUDES := $(BUILD)/fonts/include
-GRAPHICS += $(FONT_GRAPHICS)
-INCLUDES += $(FONT_INCLUDES)
-
-all: convert
-
-convert:
-	@mkdir -p $(FONT_GRAPHICS) $(FONT_INCLUDES)
-	@$(PYTHON) $(EXTSCRIPTS_DIR)fonts.py "$(EXTFONTS)" "$(FONT_GRAPHICS)" "$(FONT_INCLUDES)"
+FONT_GRAPHICS := graphics/fonts
+FONT_INCLUDES := include/fonts
+GRAPHICS := $(FONT_GRAPHICS) $(GRAPHICS)
+INCLUDES := $(FONT_INCLUDES) $(INCLUDES)

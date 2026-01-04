@@ -1,0 +1,3 @@
+fonts:
+	@mkdir -p $(FONT_GRAPHICS) $(FONT_INCLUDES)
+	@$(PYTHON) $(EXTSCRIPTS_DIR)fonts.py "$(EXTFONTS)" "$(FONT_GRAPHICS)" "$(FONT_INCLUDES)"
