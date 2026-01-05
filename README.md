@@ -1,6 +1,6 @@
 # Butano Extension Scripts
 
-Scripts to enhance Butano, but don't necessarily fit within the Butano framework's repo
+Scripts to enhance Butano
 
 I am making a 15-30 hour game for the GBA using Butano, and since we have been building this project since late-2023, I have many scripts, tools, and pipelines I've built for our game. I am here to share these scripts to hopefully help reduce your dev and asset creation time.
 
