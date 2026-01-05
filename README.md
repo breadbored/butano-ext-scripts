@@ -134,6 +134,8 @@ Now, when you run `make`, it will build the font as an asset that you can use li
 
 ```cpp
 #include "fonts/arthur_8x8_font.hpp"
+
+bn::sprite_text_generator text_generator(fonts::arthur_8x8_sprite_font);
 ```
 
 ## TODO:
