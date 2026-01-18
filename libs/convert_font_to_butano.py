@@ -161,7 +161,7 @@ def extract_characters_from_grid(
                 if char_index < len(charset) + 1:
                     bbox = char_img.getbbox()
                     if bbox:
-                        char_img = char_img.crop(bbox)
+                        # char_img = char_img.crop(bbox)
                         content_width = bbox[2] - bbox[0]
                         content_height = bbox[3] - bbox[1]
                         max_content_width = max(max_content_width, content_width)
